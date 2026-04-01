@@ -2,9 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // 👉 1. Import ตัวเก็บข้อมูล
+import '../widgets/custom_bottom_nav_item.dart';
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({super.key, this.isGuest = false});
+  final bool isGuest;
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -13,31 +16,66 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final Color _primaryTeal = const Color(0xFF008282);
   bool _isLoading = false;
+  
+  // 👉 2. สร้าง List มารอรับประวัติการค้นหา
+  List<String> _searchHistory = [];
 
-  // ฟังก์ชันยิง API ไปถามหาพิกัดจากชื่อสถานที่
+  @override
+  void initState() {
+    super.initState();
+    _loadSearchHistory(); // 👉 3. โหลดประวัติขึ้นมาทันทีที่เปิดหน้านี้
+  }
+
+  // ฟังก์ชันโหลดข้อมูลจากเครื่อง
+  Future<void> _loadSearchHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      // ดึงข้อมูล Key ชื่อ 'recent_searches' ถ้าไม่มีให้เป็น List ว่าง
+      _searchHistory = prefs.getStringList('recent_searches') ?? [];
+    });
+  }
+
+  // ฟังก์ชันบันทึกข้อมูลลงเครื่อง (พร้อม Logic 5 อัน)
+  Future<void> _saveSearchHistory(String query) async {
+    if (query.trim().isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      // Logic: ถ้ามีคำนี้อยู่แล้ว ให้ลบอันเก่าออกก่อน เพื่อเอามาแปะไว้บนสุด (อันล่าสุด)
+      _searchHistory.remove(query);
+      
+      // เพิ่มเข้าไปที่ตำแหน่งแรกสุด (Index 0)
+      _searchHistory.insert(0, query);
+
+      // ถ้าเกิน 5 อัน ให้ตัดอันสุดท้าย (เก่าสุด) ออก
+      if (_searchHistory.length > 5) {
+        _searchHistory.removeLast();
+      }
+    });
+
+    // เซฟลงเครื่องจริงๆ
+    await prefs.setStringList('recent_searches', _searchHistory);
+  }
+
   Future<void> _searchPlace(String query) async {
     if (query.trim().isEmpty) return;
     
     setState(() => _isLoading = true);
+    await _saveSearchHistory(query); // 👉 4. บันทึกคำค้นหาลงประวัติ
 
     try {
-      // ใช้ Nominatim API ของ OpenStreetMap (ฟรี)
       final url = 'https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=1';
       final response = await http.get(Uri.parse(url), headers: {
-        'User-Agent': 'com.yourcompany.moremap' // ใส่ชื่อแพ็กเกจแอปเรา
+        'User-Agent': 'com.yourcompany.moremap' 
       });
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data.isNotEmpty) {
-          // ดึงค่าละติจูดและลองจิจูดจากผลลัพธ์แรก
           final lat = double.parse(data[0]['lat']);
           final lon = double.parse(data[0]['lon']);
-          
-          // ปิดหน้าจอนี้ แล้วส่งพิกัดกลับไปให้หน้าแผนที่หลัก
           Navigator.pop(context, LatLng(lat, lon));
         } else {
-          // ถ้าหาสถานที่ไม่เจอ
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('ไม่พบสถานที่นี้ ลองพิมพ์ชื่อให้ชัดเจนขึ้นครับ')),
           );
@@ -57,7 +95,7 @@ class _SearchScreenState extends State<SearchScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. แถบสีเขียวด้านบนพร้อมช่องค้นหา
+          // ส่วน Header สีเขียว (คงเดิม)
           Container(
             padding: EdgeInsets.only(
               top: MediaQuery.of(context).padding.top + 10,
@@ -74,7 +112,6 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
             child: Row(
               children: [
-                // ปุ่มกดถอยหลัง (กันเหนียวให้ผู้ใช้กดกลับได้ง่ายๆ)
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 24),
@@ -87,9 +124,9 @@ class _SearchScreenState extends State<SearchScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: TextField(
-                      autofocus: true, // เปิดหน้ามาให้แป้นพิมพ์เด้งขึ้นมาเลย
-                      textInputAction: TextInputAction.search, // เปลี่ยนปุ่มบนแป้นพิมพ์เป็นปุ่มค้นหา
-                      onSubmitted: _searchPlace, // สั่งค้นหาเมื่อกดปุ่ม Enter
+                      autofocus: true,
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: _searchPlace,
                       decoration: InputDecoration(
                         hintText: "Search",
                         hintStyle: TextStyle(color: Colors.grey[600], fontSize: 18),
@@ -104,11 +141,10 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
           
-          // แถบโหลดข้อมูล
           if (_isLoading) 
             LinearProgressIndicator(color: _primaryTeal, backgroundColor: Colors.transparent),
 
-          // 2. ส่วนของประวัติการค้นหาล่าสุด (UI Mockup ตามรูปภาพ)
+          // 5. ส่วนแสดงประวัติการค้นหาแบบ Dynamic
           Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
@@ -119,38 +155,55 @@ class _SearchScreenState extends State<SearchScreen> {
                   style: TextStyle(fontSize: 16, color: Colors.black54),
                 ),
                 const SizedBox(height: 15),
-                _buildHistoryCard("สายใต้ใหม่"),
-                const SizedBox(height: 10),
-                _buildHistoryCard("มหาวิทยาลัยมหิดล"),
+                
+                // 👉 วนลูปสร้างประวัติการค้นหาจาก List จริงๆ
+                if (_searchHistory.isEmpty)
+                  const Center(child: Text("No recent searches", style: TextStyle(color: Colors.grey)))
+                else
+                  ..._searchHistory.map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _buildHistoryCard(item),
+                  )).toList(),
               ],
             ),
           ),
         ],
       ),
-      
-      // 3. แถบเมนูด้านล่างให้หน้าตาเหมือนหน้าหลัก
       bottomNavigationBar: _buildFakeBottomNav(),
     );
   }
 
-  // วิดเจ็ตกล่องข้อความประวัติการค้นหา
+  // แก้ไข Card ให้กดแล้วค้นหาได้ทันที
   Widget _buildHistoryCard(String text) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 16, color: Colors.black87),
+    return InkWell(
+      onTap: () => _searchPlace(text), // 👉 พอกดปุ่มประวัติ ให้ทำการค้นหาคำนั้นทันที
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.history, color: Colors.grey, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(fontSize: 16, color: Colors.black87),
+                overflow: TextOverflow.ellipsis, // กันชื่อยาวเกินจนล้น
+              ),
+            ),
+            const Icon(Icons.north_west, color: Colors.grey, size: 16),
+          ],
+        ),
       ),
     );
   }
 
-  // วิดเจ็ตเมนูด้านล่าง (สร้างไว้แค่ให้ UI เหมือนหน้าหลัก)
-  // วิดเจ็ตเมนูด้านล่าง
+  // _buildFakeBottomNav และ _buildNavItem (เหมือนเดิมที่คุณ TP มี)
   Widget _buildFakeBottomNav() {
     return Container(
       height: 85,
@@ -165,28 +218,31 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            // เพิ่ม onTap เพื่อสั่งให้ปิดหน้าค้นหาและกลับไปหน้าหลัก
             _buildNavItem(
               icon: Icons.location_on, 
               label: "Explore", 
               isActive: true,
-              onTap: () {
-                Navigator.pop(context); // คำสั่งกลับไปหน้า MainMaps
-              }
+              onTap: () => Navigator.pop(context)
             ),
             _buildNavItem(
               icon: Icons.add, 
               label: "AddRoute", 
               isLarge: true,
               onTap: () {
-                // TODO: ใส่คำสั่งไปหน้า AddRoute ในอนาคต
+                if (widget.isGuest) {
+                  showLoginRequiredDialog(context);
+                  return;
+                }
               }
             ),
             _buildNavItem(
               icon: Icons.person_outline, 
               label: "Profile",
               onTap: () {
-                // TODO: ใส่คำสั่งไปหน้า Profile ในอนาคต
+                if (widget.isGuest) {
+                  showLoginRequiredDialog(context);
+                  return;
+                }
               }
             ),
           ],
@@ -195,26 +251,17 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  // ปรับ _buildNavItem ให้รับค่า onTap เข้ามาได้ และใช้ InkWell เพื่อให้มีเอฟเฟกต์ตอนกด
   Widget _buildNavItem({required IconData icon, required String label, bool isActive = false, bool isLarge = false, VoidCallback? onTap}) {
     return InkWell(
-      onTap: onTap, // นำ onTap มาใช้งานตรงนี้
+      onTap: onTap,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, size: isLarge ? 40 : 30, color: _primaryTeal),
           const SizedBox(height: 4),
-          Text(
-            label, 
-            style: TextStyle(
-              color: _primaryTeal, 
-              fontSize: 12, 
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal
-            )
-          ),
+          Text(label, style: TextStyle(color: _primaryTeal, fontSize: 12, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
         ],
       ),
     );
   }
-  
 }

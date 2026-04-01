@@ -1,26 +1,27 @@
 import 'package:flutter/material.dart';
-// อย่าลืม import ไฟล์หน้าแผนที่ของเราเข้ามา
-import 'screens/main_map_screen.dart'; 
+import 'screens/splash_screen.dart'; // Import หน้าโหลด
+import 'constants/app_colors.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const MoreMapApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+class MoreMapApp extends StatelessWidget {
+  const MoreMapApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MoreMap',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // ปรับสีหลักของแอปตรงนี้ให้ตรงกับใน Figma ได้เลยครับ
-        primarySwatch: Colors.teal, 
+        primaryColor: AppColors.primaryTeal,
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primaryTeal),
+        useMaterial3: true,
       ),
-      // ตรงนี้แหละครับคือตัวสั่งให้เปิดหน้าแผนที่เป็นหน้าแรก!
-      home: const MainMaps(), 
-      // เอาแถบ Debug สีแดงมุมขวาบนออกจะได้ดู UI คลีนๆ
-      debugShowCheckedModeBanner: false, 
+      
+      // ให้หน้าแรกสุดเป็นหน้า Loading (SplashScreen)
+      home: const SplashScreen(),
     );
   }
 }
