@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-import 'login_screen.dart';
-import 'register_screen.dart';
-import 'main_map_screen.dart';
+import '../routes/app_routes.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -57,10 +55,7 @@ class WelcomeScreen extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () {
                     // โดดไปหน้า Login
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    );
+                    Navigator.pushNamed(context, AppRoutes.login);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryTeal,
@@ -84,7 +79,7 @@ class WelcomeScreen extends StatelessWidget {
                   GestureDetector(
                  onTap: () {
                    // 👉 เอาคอมเมนต์ตรงนี้ออกครับ
-                   Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen()));
+                   Navigator.pushNamed(context, AppRoutes.register);
                  },
                  child: const Text(
                    "Create new account",
@@ -103,10 +98,10 @@ class WelcomeScreen extends StatelessWidget {
                     ElevatedButton(
                       onPressed: () {
                         // โดดไปหน้า MainMaps พร้อมส่งธงบอกว่าเป็น Guest
-                        Navigator.pushReplacement(
+                        Navigator.pushReplacementNamed(
                           context, 
-                          // 👉 แก้กลับมาใช้ MainMaps ได้เลยครับ
-                          MaterialPageRoute(builder: (context) => const MainMaps(isGuest: true))
+                          AppRoutes.mainMap, 
+                          arguments: {'isGuest': true}, 
                         );
                       },
                       style: ElevatedButton.styleFrom(

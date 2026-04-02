@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart'; // <--- เดี๋ยวพรุ่งนี้เรามาสร้างไฟล์นี้นะครับ
 import '../constants/app_colors.dart'; 
-import 'welcome_screen.dart';// <--- ผมสมมติว่าคุณมีไฟล์สีนี้อยู่นะครับ
+import '../routes/app_routes.dart';// <--- ผมสมมติว่าคุณมีไฟล์สีนี้อยู่นะครับ
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -16,11 +16,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     // 👉 จุดที่สำคัญที่สุด: ตั้งเวลา 3 วินาที แล้วให้โดดไปหน้า Login
     Timer(const Duration(seconds: 3), () {
-      // เอาคอมเมนต์ออก แล้วแก้ชื่อหน้าเป็น LoginScreen ครับ
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-      );
+      Navigator.pushReplacementNamed(context, AppRoutes.welcome);
     });
   }
 

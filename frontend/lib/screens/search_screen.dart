@@ -57,13 +57,20 @@ class _SearchScreenState extends State<SearchScreen> {
     await prefs.setStringList('recent_searches', _searchHistory);
   }
 
+  // ฟังก์ชันยิง API ไปถามหาพิกัดจากชื่อสถานที่
   Future<void> _searchPlace(String query) async {
     if (query.trim().isEmpty) return;
     
+    // 👉 1. สั่งพับคีย์บอร์ดเก็บลงไปก่อน เพื่อให้เห็นแถบโหลดและแจ้งเตือนชัดๆ
+    FocusManager.instance.primaryFocus?.unfocus();
+
     setState(() => _isLoading = true);
-    await _saveSearchHistory(query); // 👉 4. บันทึกคำค้นหาลงประวัติ
+    await _saveSearchHistory(query); 
 
     try {
+      // 👉 2. ใส่ Delay หน่วงเวลาเทียม 800 มิลลิวินาที (ให้ UI โชว์แถบโหลดวิ่งๆ ให้ดูสมูทขึ้น)
+      await Future.delayed(const Duration(milliseconds: 800));
+
       final url = 'https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=1';
       final response = await http.get(Uri.parse(url), headers: {
         'User-Agent': 'com.yourcompany.moremap' 
@@ -74,17 +81,41 @@ class _SearchScreenState extends State<SearchScreen> {
         if (data.isNotEmpty) {
           final lat = double.parse(data[0]['lat']);
           final lon = double.parse(data[0]['lon']);
-          Navigator.pop(context, LatLng(lat, lon));
+          
+          if (mounted) {
+            Navigator.pop(context, LatLng(lat, lon));
+          }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('ไม่พบสถานที่นี้ ลองพิมพ์ชื่อให้ชัดเจนขึ้นครับ')),
-          );
+          // 👉 3. ถ้าหาไม่เจอ ให้โชว์ SnackBar สีแดงเตือนให้ชัดเจน
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('❌ ไม่พบสถานที่นี้ ลองเปลี่ยนคำค้นหาดูนะครับ'),
+                backgroundColor: Colors.redAccent, // เปลี่ยนสีพื้นหลังให้ดูเด่นขึ้น
+                behavior: SnackBarBehavior.floating, // ให้ป้ายลอยขึ้นมา ไม่ติดขอบล่าง
+                duration: Duration(seconds: 3), // ให้อยู่ค้างไว้ 3 วินาที
+              ),
+            );
+          }
         }
       }
     } catch (e) {
       print('Error searching place: $e');
+      // 👉 4. ดัก Error กรณีเน็ตหลุดหรือเซิร์ฟเวอร์ล่ม
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      // ปิดแถบโหลด
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

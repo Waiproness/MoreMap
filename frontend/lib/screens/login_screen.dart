@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-import 'main_map_screen.dart';
+import '../routes/app_routes.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -89,11 +89,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     // TODO: ใส่ฟังก์ชันเช็ก Login ของ Supabase ตรงนี้
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const MainMaps(isGuest: false),
-                      ),
+                    Navigator.pushReplacementNamed(
+                      context, 
+                      AppRoutes.mainMap, 
+                      arguments: {'isGuest': false},
                     );
                   },
                   style: ElevatedButton.styleFrom(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../screens/add_route_screen.dart';
+import 'package:moremap/constants/app_colors.dart';
 import '../screens/welcome_screen.dart'; // import หน้า AddRoute
+
 
 // ---------------------------------------------------
 // ฟังก์ชันสำหรับเรียก Popup แจ้งเตือนให้ Login 
@@ -77,13 +78,16 @@ void showLoginRequiredDialog(BuildContext context) {
 // ---------------------------------------------------
 class CustomBottomNavBar extends StatelessWidget {
   final int selectedIndex;
-  final Color _primaryTeal = const Color(0xFF008282);
   final bool isGuest;
+  final VoidCallback? onAddRouteTap;
+  final VoidCallback? onExploreTap; // 👉 1. เพิ่มตัวแปรนี้
 
   const CustomBottomNavBar({
     super.key,
     required this.selectedIndex,
     this.isGuest = false,
+    this.onAddRouteTap,
+    this.onExploreTap, // 👉 2. ใส่รับค่าตรงนี้
   });
 
   @override
@@ -101,36 +105,24 @@ class CustomBottomNavBar extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            // ปุ่ม 0: Explore
             _buildNavItem(
-              icon: Icons.location_on,
-              label: "Explore",
-              isActive: selectedIndex == 0,
-              onTap: () {
-                if (selectedIndex != 0) {
-                  Navigator.pop(context); // ถ้าไม่ได้อยู่หน้าแรก ให้ถอยกลับไปหน้าแรก
-                }
-              },
+              icon: Icons.location_on, 
+              label: "Explore", 
+              isActive: selectedIndex == 0, // สลับเป็นสี Teal ถ้าอยู่หน้า 0
+              onTap: onExploreTap,          // 👉 3. ใส่สายส่งสัญญาณนี้
             ),
-            
-            // ปุ่ม 1: AddRoute
             _buildNavItem(
-              icon: Icons.add,
-              label: "AddRoute",
+              icon: Icons.add, 
+              label: "AddRoute", 
               isLarge: true,
-              isActive: selectedIndex == 1,
+              isActive: selectedIndex == 1, // สลับเป็นสี Teal ถ้าอยู่หน้า 1
               onTap: () {
                 if (isGuest) {
-                  showLoginRequiredDialog(context); // ถ้าใช่ เด้ง Popup แจ้งเตือน
-                  return; // สั่งหยุดทำงานตรงนี้เลย โค้ดด้านล่างจะไม่ได้ไปต่อ
+                  showLoginRequiredDialog(context);
+                  return;
                 }
-                if (selectedIndex != 1) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AddRouteScreen()),
-                  );
-                }
-              },
+                if (onAddRouteTap != null) onAddRouteTap!(); 
+              }
             ),
             
             // ปุ่ม 2: Profile (เผื่ออนาคต)
@@ -159,12 +151,12 @@ class CustomBottomNavBar extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: isLarge ? 40 : 30, color: isActive ? _primaryTeal : Colors.grey),
+          Icon(icon, size: isLarge ? 40 : 30, color: isActive ? AppColors.primaryTeal : Colors.grey),
           const SizedBox(height: 4),
           Text(
             label,
             style: TextStyle(
-              color: isActive ? _primaryTeal : Colors.grey,
+              color: isActive ? AppColors.primaryTeal : Colors.grey,
               fontSize: 12,
               fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
             ),
