@@ -10,7 +10,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../constants/app_colors.dart';
 
-// 👉 1. สำคัญ: Import หน้า Profile เข้ามาเพื่อเอามาซ้อนใน IndexedStack
+// 👉 สำคัญ: Import หน้า Profile เข้ามาเพื่อเอามาซ้อนใน IndexedStack
 import '../profile/profile.dart'; 
 
 class MainMaps extends StatefulWidget {
@@ -153,7 +153,7 @@ class _MainMapsState extends State<MainMaps> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 👉 2. ใช้ IndexedStack มาสลับแฟ้มหน้าจอ
+      // 👉 ใช้ IndexedStack มาสลับแฟ้มหน้าจอ
       body: IndexedStack(
         index: _currentTabIndex == 2 ? 1 : 0, // ถ้า Tab เป็น 2 โชว์ Profile (Index 1) นอกนั้นโชว์ Map (Index 0)
         children: [
@@ -318,21 +318,39 @@ class _MainMapsState extends State<MainMaps> {
                   bottom: 20, left: 20, right: 20,
                   child: GestureDetector(
                     onTap: () {
-                      setState(() {
-                        if (!_isRecording) {
+                      if (!_isRecording) {
+                        setState(() {
                           _isRecording = true;
                           _isPaused = false;
                           _recordedRoutes.clear();
                           _totalDistance = 0.0;
                           _recordedRoutes.add([]);
                           if (_currentPosition != null) _recordedRoutes.last.add(_currentPosition!);
-                        } else {
+                        });
+                      } else {
+                        // 👉 เมื่อกด "Finished Your Route" ให้คำนวณและเด้งไปหน้า Edit
+                        setState(() {
                           _isRecording = false;
                           _isPaused = false;
                           _currentTabIndex = 0; 
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ เส้นทางถูกบันทึกเรียบร้อย!'), backgroundColor: Colors.green));
-                        }
-                      });
+                        });
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('✅ บันทึกเส้นทางสำเร็จ! กำลังไปหน้าแก้ไข...'), backgroundColor: Colors.green)
+                        );
+                        
+                        // 👉 เด้งไปหน้า Edit อย่างถูกต้องและแนบ Arguments
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.routeDetailEdit,
+                          arguments: {
+                            'distance': _totalDistance >= 1000 
+                                ? "${(_totalDistance / 1000).toStringAsFixed(2)} km" 
+                                : "${_totalDistance.toStringAsFixed(0)} m",
+                            'isNewRoute': true, // ส่งธงไปบอกหน้าแก้ไขว่าเป็นเส้นทางใหม่
+                          },
+                        );
+                      }
                     },
                     child: Container(
                       height: 55,
@@ -367,7 +385,7 @@ class _MainMapsState extends State<MainMaps> {
         ],
       ),
       
-      // 👉 3. เมนูด้านล่างสุด จะทำหน้าที่เป็นตัวเปลี่ยน Tab แค่นั้น ไม่มีการ Push/Pop
+      // 👉 เมนูด้านล่างสุด
       bottomNavigationBar: _isRecording 
           ? _buildRecordingBottomNav() 
           : CustomBottomNavBar( 

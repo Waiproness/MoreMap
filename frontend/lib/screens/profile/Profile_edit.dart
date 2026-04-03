@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 class ProfileEditPage extends StatefulWidget {
+  // 👉 1. ลบ Constructor แบบเก่าทิ้งไปเลย ให้เหลือแค่นี้ครับ
   const ProfileEditPage({super.key});
 
   @override
@@ -8,20 +9,44 @@ class ProfileEditPage extends StatefulWidget {
 }
 
 class _ProfileEditPageState extends State<ProfileEditPage> {
-  // สีหลักอิงจากรูป
   final Color primaryDarkTeal = const Color(0xFF0C8A8A);
   final Color primaryLightTeal = const Color(0xFF00CACA);
 
-  // Controllers สำหรับจัดการข้อความใน TextField
-  final TextEditingController _usernameController = TextEditingController(
-    text: 'Wai Verstappen',
-  );
-  final TextEditingController _passwordController = TextEditingController(
-    text: '**************',
-  );
-  final TextEditingController _emailController = TextEditingController(
-    text: 'WaiVerstappen.33@gmail.com',
-  );
+  late TextEditingController _usernameController;
+  late TextEditingController _passwordController;
+  late TextEditingController _emailController;
+
+  bool _isInitialized = false; // ตัวแปรเช็คว่าดึงข้อมูลหรือยัง
+
+  @override
+  void initState() {
+    super.initState();
+    // ❌ ไม่ต้องสร้าง Controller ในนี้แล้ว ให้ปล่อยว่างไว้
+  }
+
+  // 👉 2. ใช้ didChangeDependencies แทน initState สำหรับดึง ModalRoute
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // เช็คว่าเพิ่งเปิดหน้านี้ครั้งแรกใช่ไหม (เพื่อไม่ให้มันดึงค่าใหม่ซ้ำซ้อนตอนพิมพ์)
+    if (!_isInitialized) {
+      // แกะกล่องข้อมูลที่ส่งมาจากหน้าแรก
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, String>?;
+      
+      // ดึงข้อมูลออกมาใช้ (ถ้าไม่มีให้เป็นค่าว่าง)
+      final username = args?['initialUsername'] ?? '';
+      final password = args?['initialPassword'] ?? '';
+      final email = args?['initialEmail'] ?? '';
+
+      // นำข้อมูลไปใส่ในกล่องข้อความ
+      _usernameController = TextEditingController(text: username);
+      _passwordController = TextEditingController(text: password);
+      _emailController = TextEditingController(text: email);
+
+      _isInitialized = true; // เซ็ตว่าทำเสร็จแล้ว
+    }
+  }
 
   @override
   void dispose() {
@@ -33,6 +58,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ❌ ลบ ModalRoute ใน build ออกไปได้เลย เพราะเราดึงไปแล้วใน didChangeDependencies
+    
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
@@ -50,7 +77,6 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
   }
 
-  // ส่วนหัว: ปุ่ม Back, รูป Profile, ชื่อ
   Widget _buildHeader(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -66,11 +92,10 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       ),
       child: Column(
         children: [
-          // แถวบนสุด: ปุ่ม Back
           Align(
             alignment: Alignment.centerLeft,
             child: GestureDetector(
-              onTap: () => Navigator.pop(context), // คำสั่งกลับหน้าเดิม
+              onTap: () => Navigator.pop(context),
               child: const Icon(
                 Icons.arrow_back_ios,
                 color: Colors.white,
@@ -78,8 +103,6 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               ),
             ),
           ),
-
-          // รูป Profile และไอคอนดินสอแก้ไข
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -88,17 +111,16 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                 height: 130,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Color(0xFFD9D9D9), // สีเทา Placeholder
+                  color: Color(0xFFD9D9D9),
                 ),
               ),
-              // ไอคอนดินสอแก้ไขมุมขวาบน
               Positioned(
                 top: 5,
                 right: 5,
                 child: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: primaryLightTeal, // สีฟ้าอมเขียวสว่าง
+                    color: primaryLightTeal,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -111,11 +133,9 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             ],
           ),
           const SizedBox(height: 15),
-
-          // ข้อมูลผู้ใช้
-          const Text(
-            'Wai Verstappen',
-            style: TextStyle(
+          Text(
+            _usernameController.text, // แสดงชื่อที่อาจถูกพิมพ์แก้ไขอยู่แบบ Real-time
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -139,37 +159,44 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
   }
 
-  // ส่วนฟอร์มแก้ไขข้อมูล
   Widget _buildFormSection() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFE2E2E2), // พื้นหลังสีเทาอ่อน
+        color: const Color(0xFFE2E2E2),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildTextField('Username', _usernameController),
+          _buildTextField(
+            'Username',
+            _usernameController,
+            onChanged: (val) => setState(() {}),
+          ), 
           const SizedBox(height: 15),
           _buildTextField('Password', _passwordController, isPassword: true),
           const SizedBox(height: 15),
           _buildTextField('E-mail', _emailController),
           const SizedBox(height: 25),
 
-          // ปุ่ม Apply อิงขวา
           Align(
             alignment: Alignment.centerRight,
             child: ElevatedButton(
               onPressed: () {
-                // TODO: ใส่คำสั่งบันทึกข้อมูล
+                // ส่งข้อมูลที่อัปเดตแล้วกลับไปให้หน้า Profile
+                Navigator.pop(context, {
+                  'username': _usernameController.text,
+                  'password': _passwordController.text,
+                  'email': _emailController.text,
+                });
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('บันทึกข้อมูลเรียบร้อย')),
+                  const SnackBar(content: Text('Profile Updated')),
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF389C57), // สีเขียวตามรูป
+                backgroundColor: const Color(0xFF389C57),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 30,
                   vertical: 12,
@@ -193,11 +220,11 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
   }
 
-  // วิดเจ็ตสำหรับช่องกรอกข้อมูลแต่ละช่อง
   Widget _buildTextField(
     String label,
     TextEditingController controller, {
     bool isPassword = false,
+    Function(String)? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,7 +240,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         const SizedBox(height: 5),
         TextField(
           controller: controller,
-          obscureText: isPassword, // ปิดบังรหัสผ่านถ้า isPassword เป็น true
+          obscureText: isPassword,
+          onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,
@@ -221,14 +249,16 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               horizontal: 15,
               vertical: 15,
             ),
-            // ไอคอนกากบาทขวาสุด สำหรับกดเคลียร์ข้อความ
             suffixIcon: IconButton(
               icon: const Icon(Icons.cancel_outlined, color: Colors.black87),
-              onPressed: () => controller.clear(),
+              onPressed: () {
+                controller.clear();
+                if (onChanged != null) onChanged('');
+              },
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none, // เอาเส้นขอบออก
+              borderSide: BorderSide.none,
             ),
           ),
         ),
@@ -236,18 +266,15 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
   }
 
-  // ส่วนปุ่ม Log Out
   Widget _buildLogoutButton() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Align(
         alignment: Alignment.centerRight,
         child: ElevatedButton(
-          onPressed: () {
-            // TODO: ใส่คำสั่ง Log Out (เช่น กลับไปหน้า Login)
-          },
+          onPressed: () {},
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFF6B6B), // สีแดงอมส้ม
+            backgroundColor: const Color(0xFFFF6B6B),
             padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),

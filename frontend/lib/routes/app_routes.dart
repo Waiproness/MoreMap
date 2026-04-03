@@ -43,7 +43,7 @@ class AppRoutes {
       login: (context) => const LoginScreen(),
       register: (context) => const RegisterScreen(),
       
-      // หน้า MainMaps รับค่า isGuest
+      // หน้า MainMaps ยังคงรับค่าแบบเดิมได้ (หรือจะย้ายไปรับข้างในแบบหน้าอื่นก็ได้ครับ)
       mainMap: (context) {
         final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
         final isGuest = args?['isGuest'] ?? false;
@@ -52,31 +52,20 @@ class AppRoutes {
       
       search: (context) => const SearchScreen(),
 
-      // --- Profile Section (เชื่อมงานเพื่อน) ---
+      // --- Profile Section ---
       profile: (context) => const ProfilePage(),
+      
+      // 👉 แก้ไข: ให้เรียก Class เปล่าๆ เพราะเราไปแกะพัสดุ (Arguments) ข้างในหน้าจอแล้ว
       profileEdit: (context) => const ProfileEditPage(),
       savedRoute: (context) => const SavedRoutePage(),
       reportIssues: (context) => const ReportIssuesPage(),
       teamCredit: (context) => const TeamCreditPage(),
 
-      // หน้าที่มีการส่งข้อมูล (Arguments)
-      routeDetail: (context) {
-        final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-        return RouteDetailPage(
-          title: args?['title'] ?? '',
-          distance: args?['distance'] ?? '',
-          description: args?['description'] ?? '',
-        );
-      },
+      // 👉 แก้ไข: ลบการส่ง Parameter ออกให้หมด เพื่อให้ตรงกับโครงสร้างใหม่ที่เราแก้ไป
+      routeDetail: (context) => const RouteDetailPage(),
 
-      routeDetailEdit: (context) {
-        final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-        return RouteDetailEditPage(
-          title: args?['title'] ?? '',
-          distance: args?['distance'] ?? '',
-          description: args?['description'] ?? '',
-        );
-      },
+      // 👉 แก้ไข: ลบการส่ง Parameter ออกเช่นกัน
+      routeDetailEdit: (context) => const RouteDetailEditPage(),
     };
   }
 }

@@ -5,6 +5,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../widgets/circular_map_button.dart'; 
 import '../constants/app_colors.dart';
+// 👉 เรียกใช้ AppRoutes เพื่อความคลีนในการจัดการหน้าจอ
+import '../routes/app_routes.dart';
 
 class AddRouteScreen extends StatefulWidget {
   const AddRouteScreen({super.key});
@@ -16,7 +18,7 @@ class AddRouteScreen extends StatefulWidget {
 class _AddRouteScreenState extends State<AddRouteScreen> {
   final MapController _mapController = MapController();
   
-  // 👉 ตั้งค่าให้เป็นโหมดกำลังอัดตั้งแต่เริ่มเปิดหน้านี้เลย
+  // 👉 ตั้งค่าให้เป็นโหมดกำลังบันทึกตั้งแต่เริ่มเปิดหน้านี้
   bool _isRecording = true; 
   bool _isPaused = false;    
 
@@ -25,7 +27,7 @@ class _AddRouteScreenState extends State<AddRouteScreen> {
   StreamSubscription<Position>? _positionStreamSubscription;
   bool _isFollowingUser = true;
 
-  final List<List<LatLng>> _recordedRoutes = [[]]; // สร้างถังใบแรกรอไว้เลย
+  final List<List<LatLng>> _recordedRoutes = [[]]; // เก็บพิกัดเส้นทาง
   double _totalDistance = 0.0;
 
   @override
@@ -40,6 +42,7 @@ class _AddRouteScreenState extends State<AddRouteScreen> {
     super.dispose();
   }
 
+  // ระบบติดตามตำแหน่ง GPS
   Future<void> _startLocationTracking() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return;
@@ -64,7 +67,7 @@ class _AddRouteScreenState extends State<AddRouteScreen> {
             _currentPosition = newPosition; 
             _currentHeading = position.heading; 
             
-            // วาดเส้นแดงเฉพาะตอนที่ไม่ Pause
+            // บันทึกเส้นทางเฉพาะตอนที่ไม่กด Pause
             if (_isRecording && !_isPaused) {
               if (_recordedRoutes.last.isNotEmpty) {
                 final lastPoint = _recordedRoutes.last.last;
@@ -101,7 +104,7 @@ class _AddRouteScreenState extends State<AddRouteScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. แผนที่ (โชว์แค่เส้นทางกับ GPS เรา)
+          // 1. แผนที่
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
@@ -119,7 +122,7 @@ class _AddRouteScreenState extends State<AddRouteScreen> {
                 userAgentPackageName: 'com.example.moremap', 
               ),
               
-              // เส้นทางสีแดง
+              // วาดเส้นทางสีแดงที่บันทึกไว้
               if (_isRecording && _recordedRoutes.isNotEmpty)
                 PolylineLayer(
                   polylines: _recordedRoutes
@@ -132,7 +135,7 @@ class _AddRouteScreenState extends State<AddRouteScreen> {
                       .toList(),
                 ),
 
-              // หมุดแผนที่
+              // MarkerLayer สำหรับแสดงตำแหน่งผู้ใช้และจุดสิ้นสุด
               MarkerLayer(
                 markers: [
                   if (_currentPosition != null)
@@ -150,7 +153,7 @@ class _AddRouteScreenState extends State<AddRouteScreen> {
                       ),
                     ),
                   
-                  // หมุดจุดสิ้นสุดสีแดง 
+                  // หมุดสีแดงแสดงพิกัดปัจจุบัน/ล่าสุดที่บันทึก
                   if (_isRecording && _recordedRoutes.any((route) => route.isNotEmpty))
                     Marker(
                       point: _recordedRoutes.lastWhere((route) => route.isNotEmpty).last, 
@@ -162,7 +165,7 @@ class _AddRouteScreenState extends State<AddRouteScreen> {
             ],
           ),
 
-          // 2. ป้ายบอกระยะทาง
+          // 2. ป้ายบอกระยะทางแบบ Real-time
           Positioned(
             top: MediaQuery.of(context).padding.top + 10, left: 20,
             child: Container(
@@ -176,7 +179,9 @@ class _AddRouteScreenState extends State<AddRouteScreen> {
                   const Icon(Icons.directions_walk, color: AppColors.primaryTeal, size: 28),
                   const SizedBox(width: 10),
                   Text(
-                    _totalDistance >= 1000 ? "${(_totalDistance / 1000).toStringAsFixed(2)} km" : "${_totalDistance.toStringAsFixed(0)} m",
+                    _totalDistance >= 1000 
+                        ? "${(_totalDistance / 1000).toStringAsFixed(2)} km" 
+                        : "${_totalDistance.toStringAsFixed(0)} m",
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
                 ],
@@ -184,7 +189,7 @@ class _AddRouteScreenState extends State<AddRouteScreen> {
             ),
           ),
 
-          // 3. ปุ่มเข็มทิศ
+          // 3. ปุ่มควบคุมแผนที่
           Positioned(
             top: 100, right: 15,
             child: Column(
@@ -198,7 +203,7 @@ class _AddRouteScreenState extends State<AddRouteScreen> {
         ],
       ),
 
-      // 4. แผงควบคุม Pause / Finish
+      // 4. แถบควบคุมด้านล่าง (Pause & Finish)
       bottomNavigationBar: Container(
         height: 100,
         decoration: BoxDecoration(
@@ -216,6 +221,7 @@ class _AddRouteScreenState extends State<AddRouteScreen> {
                   onTap: () {
                     setState(() {
                       if (!_isPaused) {
+                        // เมื่อหยุดชั่วคราว ให้เริ่ม List ชุดใหม่เพื่อสร้างช่องว่างของเส้น
                         _recordedRoutes.add([]); 
                         if (_currentPosition != null) {
                           _recordedRoutes.last.add(_currentPosition!);
@@ -227,7 +233,11 @@ class _AddRouteScreenState extends State<AddRouteScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(_isPaused ? Icons.play_circle_fill : Icons.pause_circle_filled, size: 45, color: _isPaused ? Colors.blue : Colors.orange),
+                      Icon(
+                        _isPaused ? Icons.play_circle_fill : Icons.pause_circle_filled, 
+                        size: 45, 
+                        color: _isPaused ? Colors.blue : Colors.orange
+                      ),
                       Text(_isPaused ? "Resume" : "Pause", style: const TextStyle(fontWeight: FontWeight.bold)),
                     ],
                   ),
@@ -236,21 +246,42 @@ class _AddRouteScreenState extends State<AddRouteScreen> {
               
               const SizedBox(width: 20),
 
-              // ปุ่ม Finish
+              // ปุ่ม Finish: สรุปผลและย้ายไปยังหน้าแก้ไขข้อมูล
               Expanded(
                 flex: 2,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // 👉 กลับไปหน้า MainMap เมื่อกด Finish
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ เส้นทางถูกบันทึกเรียบร้อย!'), backgroundColor: Colors.green));
-                    Navigator.pop(context); 
+                  onPressed: () async {
+                    if (context.mounted) {
+                      // 1. แสดง SnackBar ก่อนเพื่อให้รู้ว่าปุ่มโดนกดแล้ว
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('กำลังบันทึกและไปหน้าแก้ไข...'),
+                          backgroundColor: Colors.blue,
+                        ),
+                      );
+
+                      // 2. ใช้ AppRoutes.routeDetailEdit (ตัวแปร static) แทนการพิมพ์ชื่อ path เอง
+                      Navigator.pushReplacementNamed(
+                        context,
+                        AppRoutes.routeDetailEdit, // 👈 ใช้ตัวแปรนี้จะชัวร์กว่าพิมพ์ '/route-detail-edit'
+                        arguments: {
+                          'distance': _totalDistance >= 1000 
+                              ? "${(_totalDistance / 1000).toStringAsFixed(2)} km" 
+                              : "${_totalDistance.toStringAsFixed(0)} m",
+                          'isNewRoute': true,
+                        },
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.redAccent,
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Text("Finish Route", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    "Finish Route", 
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)
+                  ),
                 ),
               ),
             ],
