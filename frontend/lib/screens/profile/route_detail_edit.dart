@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:typed_data'; 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart'; 
@@ -207,8 +206,13 @@ class _RouteDetailEditPageState extends State<RouteDetailEditPage> {
                             decoration: BoxDecoration(color: const Color(0xFFD9D9D9), borderRadius: BorderRadius.circular(5)),
                             child: TextField(
                               controller: _titleController,
+                              maxLength: 50, // 🔥 ล็อคความยาวชื่อ 50 ตัวอักษร
                               style: const TextStyle(fontSize: 20),
-                              decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.only(left: 10, bottom: 12)),
+                              decoration: const InputDecoration(
+                                border: InputBorder.none, 
+                                contentPadding: EdgeInsets.only(left: 10, bottom: 12),
+                                counterText: "", // 🔥 ซ่อนตัวนับเลข เพื่อไม่ให้ UI พัง
+                              ),
                             ),
                           ),
                         ),
@@ -219,11 +223,9 @@ class _RouteDetailEditPageState extends State<RouteDetailEditPage> {
                     Text('Distance: $distance', style: const TextStyle(fontSize: 20, color: Colors.black87)),
                     const SizedBox(height: 20),
 
-                    // 🔥 Map Preview แบบกัน Error โชว์เส้นทาง 🔥
                     if (_routePoints.isNotEmpty) ...[
                       Builder(
                         builder: (context) {
-                          // เช็คว่ามีการขยับไปจากจุดแรกจริงๆ ไหม เพื่อป้องกัน NaN Error
                           bool hasRealMovement = _routePoints.length > 1 && 
                               _routePoints.any((p) => p.latitude != _routePoints.first.latitude || p.longitude != _routePoints.first.longitude);
 
@@ -309,8 +311,15 @@ class _RouteDetailEditPageState extends State<RouteDetailEditPage> {
                     TextField(
                       controller: _descriptionController,
                       maxLines: null,
+                      maxLength: 500, // 🔥 ล็อคความยาวรายละเอียด 500 ตัวอักษร
                       style: const TextStyle(fontSize: 18, color: Colors.black87, height: 1.3),
-                      decoration: const InputDecoration(border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero, hintText: 'Write your description here...'),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none, 
+                        isDense: true, 
+                        contentPadding: EdgeInsets.zero, 
+                        hintText: 'Write your description here...',
+                        counterText: "", // 🔥 ซ่อนตัวนับเลข
+                      ),
                     ),
                     const SizedBox(height: 40),
 
