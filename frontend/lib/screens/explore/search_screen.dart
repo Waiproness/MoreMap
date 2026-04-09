@@ -48,7 +48,7 @@ class _SearchScreenState extends State<SearchScreen> {
     await prefs.setStringList('recent_searches', _searchHistory);
   }
 
-  // 🚀 ฟังก์ชันยิง API ไปถามหาพิกัด (อัปเกรดระบบดักจับคำค้นหาแล้ว)
+  // 🚀 ฟังก์ชันยิง API ไปถามหาพิกัด
   Future<void> _searchPlace(String query) async {
     String searchText = query.trim();
     
@@ -71,7 +71,7 @@ class _SearchScreenState extends State<SearchScreen> {
     bool isOnlySpecialChars = RegExp(r'^[^a-zA-Z0-9ก-๙]+$').hasMatch(searchText);
 
     if (isOnlyNumbers) {
-      FocusManager.instance.primaryFocus?.unfocus(); // ซ่อนคีย์บอร์ด
+      FocusManager.instance.primaryFocus?.unfocus(); 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -81,11 +81,11 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         );
       }
-      return; // 🛑 สั่งหยุดการทำงาน ไม่บันทึกประวัติ ไม่ยิง API
+      return; 
     }
 
     if (isOnlySpecialChars) {
-      FocusManager.instance.primaryFocus?.unfocus(); // ซ่อนคีย์บอร์ด
+      FocusManager.instance.primaryFocus?.unfocus(); 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -95,7 +95,54 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         );
       }
-      return; // 🛑 สั่งหยุดการทำงาน
+      return; 
+    }
+
+    // --- 🛡️ 3. ดักจับกลุ่มร้านแฟรนไชส์ / สาขาเยอะ ---
+    String lowerQuery = searchText.toLowerCase();
+    
+    // ลิสต์คำที่เป็นร้านค้าทั่วไป หรือมีสาขาเยอะ
+    List<String> franchises = [
+      'dairy queen', 'kfc', 'mcdonald', 'starbucks', '7-11', '7-eleven', 'เซเว่น', 'โลตัส', 
+      'lotus', 'big c', 'บิ๊กซี', 'cafe amazon', 'อเมซอน', 'cj', 'ซีเจ', 'pizza'
+    ];
+    
+    bool isFranchise = franchises.any((word) => lowerQuery.contains(word));
+    if (isFranchise) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ สถานที่มีเยอะเกินไปและเนื่องด้วยความจำกัดของแอป จึงไม่สามารถบอกได้'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return; // 🛑 หยุดทำงานทันที ไม่ส่ง API
+    }
+
+    // --- 🛡️ 4. ดักจับคำขยะ / คำทดสอบ (Test Words) ---
+    // ลิสต์คำที่มักใช้พิมพ์เล่นๆ หรือพิมพ์เทส
+    List<String> invalidWords = [
+      'test', 'ทดสอบ', 'asdf', 'qwerty', 'abc', 'apple', 'apple pie', 'yamlo', 'titannic', 'titanic'
+    ];
+    
+    // เช็คว่าคำค้นหามีคำว่า test/ทดสอบ ผสมอยู่ หรือตรงกับคำใน list ขยะเป๊ะๆ
+    bool isInvalidWord = invalidWords.contains(lowerQuery) || lowerQuery.contains('test') || lowerQuery.contains('ทดสอบ');
+    
+    if (isInvalidWord) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ ไม่มีชื่อสถานที่นั้น'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return; // 🛑 หยุดทำงานทันที ไม่ส่ง API
     }
     // ------------------------------------
 
@@ -191,13 +238,13 @@ class _SearchScreenState extends State<SearchScreen> {
                       autofocus: true,
                       textInputAction: TextInputAction.search,
                       onSubmitted: _searchPlace,
-                      maxLength: 100, // 🔥 3. ล็อคความยาวไม่เกิน 100 ตัวอักษร
+                      maxLength: 100, 
                       decoration: InputDecoration(
                         hintText: "Search",
                         hintStyle: TextStyle(color: Colors.grey[600], fontSize: 18),
                         prefixIcon: const Icon(Icons.search, color: Colors.black87, size: 28),
                         border: InputBorder.none,
-                        counterText: "", // 🔥 4. ซ่อนตัวนับเลขเพื่อความคลีนของ UI
+                        counterText: "", 
                         contentPadding: const EdgeInsets.symmetric(vertical: 15),
                       ),
                     ),
@@ -256,7 +303,7 @@ class _SearchScreenState extends State<SearchScreen> {
               child: Text(
                 text,
                 style: const TextStyle(fontSize: 16, color: Colors.black87),
-                overflow: TextOverflow.ellipsis, // กันชื่อยาวเกินจนล้น
+                overflow: TextOverflow.ellipsis, 
               ),
             ),
             const Icon(Icons.north_west, color: Colors.grey, size: 16),

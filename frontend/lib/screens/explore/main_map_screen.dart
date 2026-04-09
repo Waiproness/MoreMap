@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
 
 import '../../widgets/custom_bottom_nav_item.dart';
 import '../../widgets/circular_map_button.dart';
@@ -26,7 +24,6 @@ class _MainMapsState extends State<MainMaps> {
   final RouteService _routeService = RouteService(); 
   
   int _currentTabIndex = 0;
-  Timer? _debounceTimer;
 
   bool _isRecording = false; 
   bool _isPaused = false;    
@@ -39,7 +36,6 @@ class _MainMapsState extends State<MainMaps> {
   bool _isFollowingUser = true;
 
   final LatLng _initialCenter = const LatLng(13.7946, 100.3236); 
-  List<Marker> _poiMarkers = [];
   
   List<Polyline> _cloudPolylines = []; 
 
@@ -54,11 +50,11 @@ class _MainMapsState extends State<MainMaps> {
           content: const Text(' Yes or No?', style: TextStyle(fontSize: 16)),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false), // กด No ส่งค่า false
+              onPressed: () => Navigator.of(context).pop(false), 
               child: const Text('No', style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold)),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true), // กด Yes ส่งค่า true
+              onPressed: () => Navigator.of(context).pop(true), 
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryTeal,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -106,54 +102,6 @@ class _MainMapsState extends State<MainMaps> {
     }
   }
 
-  Future<void> _fetchCyclingPOIs(LatLngBounds bounds) async {
-    final south = bounds.south;
-    final west = bounds.west;
-    final north = bounds.north;
-    final east = bounds.east;
-
-    String query = '''
-      [out:json][timeout:25];
-      (
-        node["amenity"="fuel"]($south,$west,$north,$east);
-        node["leisure"="park"]($south,$west,$north,$east);
-        node["shop"="convenience"]($south,$west,$north,$east);
-        node["amenity"="drinking_water"]($south,$west,$north,$east);
-      );
-      out body;
-    ''';
-
-    final url = Uri.parse('https://overpass-api.de/api/interpreter');
-    try {
-      final response = await http.post(url, body: {'data': query});
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final elements = data['elements'] as List;
-
-        if (!mounted) return; 
-        
-        setState(() {
-          _poiMarkers = elements.map((element) {
-            final lat = element['lat'];
-            final lon = element['lon'];
-            final tags = element['tags'] ?? {};
-            IconData icon = Icons.place;
-            Color iconColor = Colors.grey;
-            
-            if (tags['amenity'] == 'fuel') { icon = Icons.local_gas_station; iconColor = Colors.orange; } 
-            else if (tags['leisure'] == 'park') { icon = Icons.park; iconColor = Colors.green; } 
-            else if (tags['shop'] == 'convenience') { icon = Icons.storefront; iconColor = Colors.blue; } 
-            else if (tags['amenity'] == 'drinking_water') { icon = Icons.water_drop; iconColor = Colors.lightBlue; }
-
-            return Marker(point: LatLng(lat, lon), width: 40, height: 40, child: Icon(icon, color: iconColor, size: 30));
-          }).toList();
-        });
-      }
-    } catch (e) {
-      print("Error fetching POIs: $e");
-    }
-  }
-
   @override
   void initState() {
     super.initState();
@@ -164,7 +112,6 @@ class _MainMapsState extends State<MainMaps> {
   @override
   void dispose() {
     _positionStreamSubscription?.cancel();
-    _debounceTimer?.cancel(); 
     _mapController.dispose();
     super.dispose();
   }
@@ -241,15 +188,6 @@ class _MainMapsState extends State<MainMaps> {
                       if (_isFollowingUser) {
                         setState(() => _isFollowingUser = false);
                       }
-                      if (_debounceTimer?.isActive ?? false) {
-                        _debounceTimer!.cancel();
-                      }
-                      _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-                        final currentBounds = camera.bounds;
-                        if (currentBounds != null) {
-                          _fetchCyclingPOIs(currentBounds);
-                        }
-                      });
                     }
                   },
                 ), 
@@ -269,8 +207,6 @@ class _MainMapsState extends State<MainMaps> {
                     
                   MarkerLayer(
                     markers: [
-                      ..._poiMarkers, 
-                      
                       if (_currentPosition != null)
                         Marker(
                           point: _currentPosition!, width: 60, height: 60,
@@ -344,9 +280,23 @@ class _MainMapsState extends State<MainMaps> {
                             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15)),
                             child: Row(
                               children: [
-                                const Text("GPS", style: TextStyle(color: AppColors.primaryTeal, fontWeight: FontWeight.bold, fontSize: 12)),
+                                Text(
+                                  "GPS", 
+                                  style: TextStyle(
+                                    color: _currentPosition != null ? AppColors.primaryTeal : Colors.grey, 
+                                    fontWeight: FontWeight.bold, 
+                                    fontSize: 12
+                                  )
+                                ),
                                 const SizedBox(width: 4),
-                                Container(width: 6, height: 6, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
+                                Container(
+                                  width: 6, 
+                                  height: 6, 
+                                  decoration: BoxDecoration(
+                                    color: _currentPosition != null ? Colors.green : Colors.grey, 
+                                    shape: BoxShape.circle
+                                  )
+                                ),
                               ],
                             ),
                           )
@@ -390,13 +340,10 @@ class _MainMapsState extends State<MainMaps> {
                 Positioned(
                   bottom: 20, left: 20, right: 20,
                   child: GestureDetector(
-                    // 🔥 แก้ไขตรงนี้เป็น async เพื่อรอรับค่าจาก Popup 🔥
                     onTap: () async {
                       if (!_isRecording) {
-                        // 👉 เรียก Popup ขึ้นมาถามก่อน
                         bool? confirm = await _showConfirmationDialog();
 
-                        // 👉 ถ้าผู้ใช้กด Yes (confirm เป็น true) ค่อยเริ่มบันทึก
                         if (confirm == true && mounted) {
                           setState(() {
                             _isRecording = true;

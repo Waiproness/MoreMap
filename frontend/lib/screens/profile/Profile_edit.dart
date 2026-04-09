@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; 
+
 import '../../routes/app_routes.dart';
 import '../../services/route_service.dart';
 
@@ -43,7 +45,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       
       _usernameController.text = args?['initialUsername'] ?? '';
-      _passwordController.text = '********'; // 🔥 แทรกบรรทัดนี้เพิ่มเข้าไปครับ
+      _passwordController.text = '********'; 
       _emailController.text = args?['initialEmail'] ?? '';
       _existingAvatarUrl = args?['initialAvatarUrl'];
       _joinDate = args?['joinDate'] ?? 'Joined Feb 2026';
@@ -65,6 +67,41 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     } catch (e) {
       print('Error picking image: $e');
     }
+  }
+
+  // 🔥 ฟังก์ชันสร้าง Popup ยืนยันการเปลี่ยนแปลง 🔥
+  Future<bool?> _showConfirmationDialog() {
+    return showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: const Text('Confirm Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: const Text('Want to keep changes or discard?', style: TextStyle(fontSize: 16)),
+          actionsAlignment: MainAxisAlignment.spaceEvenly, 
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(false), 
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF6B6B), 
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
+              child: const Text('Discard', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true), 
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF389C57), 
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
+              child: const Text('Change', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -103,7 +140,6 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              // 🔥 แสดงรูปโปรไฟล์ที่กำลังเลือก
               Container(
                 width: 130, height: 130,
                 decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFD9D9D9)),
@@ -117,7 +153,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               Positioned(
                 top: 5, right: 5,
                 child: GestureDetector(
-                  onTap: _pickImage, // กดเพื่อเปลี่ยนรูป
+                  onTap: _pickImage, 
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(color: primaryLightTeal, shape: BoxShape.circle),
@@ -128,13 +164,12 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             ],
           ),
           const SizedBox(height: 15),
-          // 🔥 ชื่อเปลี่ยนตามแบบ Real-time ทันที!
           Text(
             _usernameController.text.isNotEmpty ? _usernameController.text : 'No Name', 
             style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 5),
-          Text(_joinDate, style: const TextStyle(color: Colors.white, fontSize: 14)), // 🔥 วันที่ Sync แล้ว
+          Text(_joinDate, style: const TextStyle(color: Colors.white, fontSize: 14)), 
         ],
       ),
     );
@@ -169,20 +204,50 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             alignment: Alignment.centerRight,
             child: ElevatedButton(
               onPressed: _isLoading ? null : () async {
+                // 🔥 1. ดัก Validation ก่อนเปิด Popup! 🔥
+                final newUsername = _usernameController.text.trim();
+                final newPassword = _passwordController.text.trim();
+
+                if (newUsername.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('⚠️ กรุณากรอก Username ห้ามปล่อยว่างครับ'), backgroundColor: Colors.orange));
+                  return; // หยุดการทำงาน
+                }
+
+                if (newPassword.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('⚠️ กรุณากรอก Password ห้ามปล่อยว่างครับ'), backgroundColor: Colors.orange));
+                  return; // หยุดการทำงาน
+                }
+
+                if (newPassword != '********' && newPassword.length < 6) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('⚠️ Password ต้องมีอย่างน้อย 6 ตัวอักษรครับ'), backgroundColor: Colors.orange));
+                  return; // หยุดการทำงาน
+                }
+                // ------------------------------------
+
+                bool? confirm = await _showConfirmationDialog();
+                
+                // ถ้ากดปุ่ม Discard (หรือกดพื้นที่ว่างปิด Popup) ให้หยุดการทำงาน
+                if (confirm != true) return;
+
                 setState(() => _isLoading = true);
                 final RouteService routeService = RouteService();
                 try {
                   String? finalAvatar = _existingAvatarUrl;
-                  // ถ้าเลือกรูปใหม่ ให้อัปโหลดก่อน
                   if (_selectedAvatarBytes != null) {
                     finalAvatar = await routeService.uploadAvatar(_selectedAvatarBytes!, _fileExtension);
                   }
                   
-                  // ส่งขึ้น Cloud
-                  await routeService.updateUserProfile(_usernameController.text, finalAvatar);
+                  await routeService.updateUserProfile(newUsername, finalAvatar);
+
+                  // อัปเดตรหัสผ่าน
+                  if (newPassword != '********') {
+                    await Supabase.instance.client.auth.updateUser(
+                      UserAttributes(password: newPassword),
+                    );
+                  }
                   
                   if (mounted) {
-                    Navigator.pop(context, true); // ส่งค่ากลับบอกหน้าหลักว่าแก้ไขสำเร็จ
+                    Navigator.pop(context, true); 
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile Updated! ✅'), backgroundColor: Colors.green));
                   }
                 } catch (e) {
@@ -225,7 +290,6 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   }
 
   Widget _buildLogoutButton() {
-    // โค้ด Logout ของเดิมคุณวางตรงนี้ได้เลยครับ...
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Align(
