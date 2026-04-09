@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'constants/app_colors.dart';
 import 'routes/app_routes.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // 👉 1. เพิ่ม Import Supabase
-// (import ไฟล์ route อื่นๆ ของคุณตามปกติ...)
+import 'package:supabase_flutter/supabase_flutter.dart'; 
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // 👉 1. Import ตัวอ่านไฟล์ .env
 
-void main() async {
+Future<void> main() async {
   // 👉 2. บรรทัดนี้สำคัญมาก! ต้องมีเมื่อเราใช้คำสั่ง async/await ใน main()
   WidgetsFlutterBinding.ensureInitialized(); 
 
-  // 👉 3. เอา "กุญแจ" มาเสียบเพื่อเชื่อมต่อฐานข้อมูล
+  // 👉 3. สั่งให้ระบบไปเปิดอ่านไฟล์ .env ก่อนเป็นอันดับแรก
+  await dotenv.load(fileName: ".env"); 
+
+  // 👉 4. เอา "กุญแจ" มาเสียบเพื่อเชื่อมต่อฐานข้อมูล (ดึงค่ามาจากไฟล์ .env)
   await Supabase.initialize(
-    url: 'https://veexhgknzwqddaweguur.supabase.co', // เอา API URL มาใส่ตรงนี้
-    anonKey: 'sb_publishable_uQihulJX77O4j6t3w7Wkig_3d1LPfK2', // เอา Publishable Key ยาวๆ มาใส่ตรงนี้
+    url: dotenv.env['SUPABASE_URL'] ?? '', 
+    anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '', 
   );
 
   runApp(const MoreMapApp());
