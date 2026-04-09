@@ -51,9 +51,22 @@ class _SearchScreenState extends State<SearchScreen> {
   // 🚀 ฟังก์ชันยิง API ไปถามหาพิกัด (อัปเกรดระบบดักจับคำค้นหาแล้ว)
   Future<void> _searchPlace(String query) async {
     String searchText = query.trim();
-    if (searchText.isEmpty) return;
     
-    // --- 🛡️ 1. ดักจับข้อความก่อนเริ่มค้นหา ---
+    // --- 🛡️ 1. ดักจับข้อความว่างเปล่า ---
+    if (searchText.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ กรุณาพิมพ์ชื่อสถานที่ก่อนค้นหา'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return; // 🛑 หยุดทำงาน
+    }
+    
+    // --- 🛡️ 2. ดักจับตัวเลขและอักขระพิเศษ ---
     bool isOnlyNumbers = RegExp(r'^[0-9]+$').hasMatch(searchText);
     bool isOnlySpecialChars = RegExp(r'^[^a-zA-Z0-9ก-๙]+$').hasMatch(searchText);
 
@@ -178,11 +191,13 @@ class _SearchScreenState extends State<SearchScreen> {
                       autofocus: true,
                       textInputAction: TextInputAction.search,
                       onSubmitted: _searchPlace,
+                      maxLength: 100, // 🔥 3. ล็อคความยาวไม่เกิน 100 ตัวอักษร
                       decoration: InputDecoration(
                         hintText: "Search",
                         hintStyle: TextStyle(color: Colors.grey[600], fontSize: 18),
                         prefixIcon: const Icon(Icons.search, color: Colors.black87, size: 28),
                         border: InputBorder.none,
+                        counterText: "", // 🔥 4. ซ่อนตัวนับเลขเพื่อความคลีนของ UI
                         contentPadding: const EdgeInsets.symmetric(vertical: 15),
                       ),
                     ),
